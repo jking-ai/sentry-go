@@ -58,12 +58,22 @@ func NewTriageService(ctx context.Context, projectID string) (*TriageService, er
 		Description: "Expert SRE that analyzes logs, metrics, and commits to find root causes.",
 		Instruction: `You are an expert Site Reliability Engineer producing a one-shot incident triage report for a dashboard card.
 
-Strict output rules:
+Strict output rules (apply to every response):
 - Output ONLY the root-cause analysis. Do not greet, acknowledge, or ask the user any questions.
-- Never request additional data. Work with whatever signals are provided, even if they are sparse or empty.
-- If logs and commits are empty or unavailable, state the most likely cause categories given the policy and condition name (e.g. recent deploy regression, resource saturation, dependency/upstream outage, configuration drift) and explicitly note the data was unavailable.
-- Respond in plain prose, 2-4 sentences, no markdown headers, no bullet lists, no code fences.
-- Lead with the most likely root cause, then briefly cite the supporting signal (or note its absence).`,
+- Never request additional data.
+- Respond in plain prose, 2-4 sentences. No markdown headers, no bullet lists, no code fences.
+- Lead with the most likely root cause, then briefly cite the supporting signal.
+
+The user prompt will declare a Mode: LIVE or SIMULATION.
+
+LIVE mode:
+- Analyze the provided telemetry. Cite the specific log line, commit, or condition that supports your hypothesis.
+- If logs and commits are empty, state the most likely cause categories (recent deploy regression, resource saturation, dependency/upstream outage, configuration drift) and explicitly note the data was unavailable.
+
+SIMULATION mode:
+- Produce a concrete, plausible root cause for demo purposes. Invent realistic specifics: a short commit SHA, a believable error type or signal name, a timestamp, a pod or revision identifier, etc. Match the resource and policy in the prompt.
+- Write as if you had analyzed real telemetry. Do NOT mention that data was unavailable, that you are simulating, that details are invented, or qualify with "hypothetical" / "likely" wording about data origin.
+- Still obey the 2-4 sentence plain-prose limit.`,
 	})
 	if err != nil {
 		return nil, err
@@ -114,16 +124,23 @@ func (s *TriageService) StartTriage(ctx context.Context, alert model.Alert) {
 		logsSection = strings.Join(logs, "\n")
 	}
 
-	prompt := fmt.Sprintf(`Produce a root-cause hypothesis for the incident below. Respond with the analysis only — no preamble, no questions.
+	mode := "LIVE"
+	if strings.Contains(strings.ToLower(alert.Incident.PolicyName), "simulation") {
+		mode = "SIMULATION"
+	}
+
+	prompt := fmt.Sprintf(`Mode: %s
+Produce a root-cause hypothesis for the incident below. Respond with the analysis only — no preamble, no questions.
 
 Incident Policy: %s
 Condition: %s
+Resource: %s
 
 Recent Error Logs (last 15m):
 %s
 
 Recent Commits:
-%s`, alert.Incident.PolicyName, alert.Incident.ConditionName, logsSection, commitsSummary)
+%s`, mode, alert.Incident.PolicyName, alert.Incident.ConditionName, alert.Incident.ResourceID, logsSection, commitsSummary)
 
 	events := s.Runner.Run(ctx, "system", alert.Incident.IncidentID, &genai.Content{
 		Parts: []*genai.Part{{Text: prompt}},
