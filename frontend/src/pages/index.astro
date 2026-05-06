@@ -1,0 +1,231 @@
+---
+import '../styles/global.css';
+
+const apiUrl = import.meta.env.PUBLIC_API_URL ?? '';
+---
+
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>Sentry-Go Command Center</title>
+    
+
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+    
+    <style>
+        body {
+            background-color: #131313;
+            color: #e5e2e1;
+            -webkit-font-smoothing: antialiased;
+            min-height: max(884px, 100dvh);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .glow-blue {
+            box-shadow: 0 0 12px rgba(173, 198, 255, 0.4);
+        }
+        .inner-glow-primary {
+            box-shadow: inset 0 0 2px rgba(173, 198, 255, 0.6);
+        }
+    </style>
+</head>
+
+<body class="font-body-md overflow-x-hidden">
+    <!-- TopAppBar -->
+    <header class="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-margin h-16 shadow-none">
+        <div class="flex items-center gap-3">
+            <h1 class="font-display text-h2 font-bold text-primary tracking-tight">Sentry-Go</h1>
+        </div>
+        <button class="active:scale-95 transition-transform hover:opacity-80 transition-opacity">
+            <span class="material-symbols-outlined text-primary" data-icon="notifications">notifications</span>
+        </button>
+    </header>
+
+    <main class="pt-24 pb-16 px-margin max-w-6xl mx-auto md:grid md:grid-cols-12 md:gap-xl">
+        <!-- Left Column: Info & Controls -->
+        <div class="md:col-span-5 space-y-lg mb-lg md:mb-0">
+            <!-- Hero Section: Project Description -->
+            <section>
+                <div class="glass-card rounded-xl p-md relative overflow-hidden">
+                    <!-- Background decorative glow -->
+                    <div class="absolute -top-12 -right-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl"></div>
+                    <h2 class="font-display text-h2 text-on-surface mb-xs">Sentry-Go Command Center</h2>
+                    <p class="font-body-md text-on-surface-variant leading-relaxed mb-md">
+                        Automated Incident Response &amp; Triage Platform. Our engine autonomously reduces MTTD via advanced behavioral analysis and real-time network mapping.
+                    </p>
+                    <div class="flex items-center gap-sm">
+                        <span class="font-mono-label text-mono-label uppercase tracking-widest text-primary bg-primary/10 px-xs py-1 rounded border border-primary/20">Operational</span>
+                        <span class="font-mono-label text-mono-label text-on-surface-variant opacity-60">System Version 4.8.2</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Primary Action -->
+            <section>
+                <button id="simulate" class="w-full bg-primary-container text-on-primary-container py-md px-lg rounded-xl font-h2 flex items-center justify-center gap-sm glow-blue active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                    <span class="material-symbols-outlined" data-icon="bolt" data-weight="fill" style="font-variation-settings: 'FILL' 1;">bolt</span>
+                    <span id="simulate-text">Trigger Incident</span>
+                </button>
+            </section>
+
+            <!-- Visual Data Visualization Slice (Desktop) -->
+            <div class="glass-card rounded-xl p-md bg-gradient-to-br from-surface-container-high/40 to-surface/40 overflow-hidden relative h-32 hidden md:block">
+                <div class="absolute inset-0 flex items-end px-sm pb-sm gap-[2px]">
+                    <div class="bg-primary/20 w-full rounded-t-sm" style="height: 40%"></div>
+                    <div class="bg-primary/30 w-full rounded-t-sm" style="height: 65%"></div>
+                    <div class="bg-primary/40 w-full rounded-t-sm" style="height: 50%"></div>
+                    <div class="bg-primary/20 w-full rounded-t-sm" style="height: 85%"></div>
+                    <div class="bg-primary/50 w-full rounded-t-sm" style="height: 30%"></div>
+                    <div class="bg-primary/40 w-full rounded-t-sm" style="height: 95%"></div>
+                    <div class="bg-primary/60 w-full rounded-t-sm" style="height: 70%"></div>
+                    <div class="bg-primary/30 w-full rounded-t-sm" style="height: 45%"></div>
+                    <div class="bg-secondary/40 w-full rounded-t-sm" style="height: 35%"></div>
+                    <div class="bg-secondary/60 w-full rounded-t-sm" style="height: 15%"></div>
+                    <div class="bg-primary/40 w-full rounded-t-sm" style="height: 55%"></div>
+                    <div class="bg-primary/20 w-full rounded-t-sm" style="height: 80%"></div>
+                </div>
+                <div class="relative z-10">
+                    <span class="font-mono-label text-[10px] uppercase text-on-surface-variant opacity-80">Autonomous Analysis Load</span>
+                    <div class="text-h2 font-display text-primary">84.2% <span class="text-sm opacity-60">OPTIMIZED</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Feed -->
+        <div class="md:col-span-7 flex flex-col h-full">
+            <!-- Dashboard Feed Header -->
+            <div class="flex justify-between items-end mb-md">
+                <h3 class="font-display text-h2 text-on-surface">Recent Incidents</h3>
+                <span class="font-mono-label text-mono-label text-secondary uppercase">Live Feed</span>
+            </div>
+
+            <!-- Incident Feed -->
+            <div class="space-y-sm flex-1" id="feed">
+                <div class="text-center p-md text-on-surface-variant">Loading incident reports...</div>
+            </div>
+
+            <!-- Visual Data Visualization Slice (Mobile) -->
+            <div class="glass-card rounded-xl p-md mt-lg bg-gradient-to-br from-surface-container-high/40 to-surface/40 overflow-hidden relative h-32 md:hidden">
+                <div class="absolute inset-0 flex items-end px-sm pb-sm gap-[2px]">
+                    <div class="bg-primary/20 w-full rounded-t-sm" style="height: 40%"></div>
+                    <div class="bg-primary/30 w-full rounded-t-sm" style="height: 65%"></div>
+                    <div class="bg-primary/40 w-full rounded-t-sm" style="height: 50%"></div>
+                    <div class="bg-primary/20 w-full rounded-t-sm" style="height: 85%"></div>
+                    <div class="bg-primary/50 w-full rounded-t-sm" style="height: 30%"></div>
+                    <div class="bg-primary/40 w-full rounded-t-sm" style="height: 95%"></div>
+                    <div class="bg-primary/60 w-full rounded-t-sm" style="height: 70%"></div>
+                    <div class="bg-primary/30 w-full rounded-t-sm" style="height: 45%"></div>
+                    <div class="bg-secondary/40 w-full rounded-t-sm" style="height: 35%"></div>
+                    <div class="bg-secondary/60 w-full rounded-t-sm" style="height: 15%"></div>
+                    <div class="bg-primary/40 w-full rounded-t-sm" style="height: 55%"></div>
+                    <div class="bg-primary/20 w-full rounded-t-sm" style="height: 80%"></div>
+                </div>
+                <div class="relative z-10">
+                    <span class="font-mono-label text-[10px] uppercase text-on-surface-variant opacity-80">Autonomous Analysis Load</span>
+                    <div class="text-h2 font-display text-primary">84.2% <span class="text-sm opacity-60">OPTIMIZED</span></div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+
+    <script define:vars={{ apiUrl }}>
+        async function loadReports() {
+            const feed = document.getElementById('feed');
+            if (!apiUrl) {
+                feed.innerHTML = '<div class="glass-card rounded-xl p-md text-center text-error">PUBLIC_API_URL is not configured. Set it in your .env file before building.</div>';
+                return;
+            }
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/incidents`);
+                const reports = await response.json();
+                
+                if (reports.length === 0) {
+                    feed.innerHTML = '<div class="glass-card rounded-xl p-md text-center text-on-surface-variant">No incidents found. System is healthy.</div>';
+                    return;
+                }
+
+                feed.innerHTML = reports.map(report => {
+                    const isTriage = report.status.toLowerCase() === 'triage';
+                    const title = isTriage ? 'Incident Under Triage' : 'Incident Resolved';
+                    const time = (report.triage_time / 1000000000).toFixed(2);
+                    
+                    return `
+                        <div class="glass-card rounded-xl p-md flex flex-col gap-sm border-l-2 ${isTriage ? 'border-l-primary-container animate-pulse-subtle' : 'border-l-secondary'}">
+                            <div class="flex justify-between items-start">
+                                <div class="flex flex-col">
+                                    <span class="font-mono-label text-mono-label text-on-surface-variant">#${report.incident_id}</span>
+                                    <h4 class="font-h2 text-on-surface text-lg">${title}</h4>
+                                </div>
+                                <div class="flex flex-col items-end">
+                                    <span class="flex items-center gap-1 ${isTriage ? 'text-primary' : 'text-secondary'} font-bold text-xs uppercase tracking-tighter">
+                                        <span class="w-1.5 h-1.5 rounded-full ${isTriage ? 'bg-primary animate-ping' : 'bg-secondary'}"></span>
+                                        ${report.status}
+                                    </span>
+                                    <span class="text-[10px] text-on-surface-variant/60 font-mono-label mt-1">${time}s TRIAGE</span>
+                                </div>
+                            </div>
+                            <div class="pt-sm border-t border-white/5">
+                                <p class="text-on-surface-variant text-sm font-body-md italic leading-snug">
+                                    Root Cause: ${report.root_cause || 'No analysis provided.'}
+                                </p>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                feed.innerHTML = '<div class="glass-card rounded-xl p-md text-center text-error">Failed to load reports. Ensure the Sentry-Go backend is running.</div>';
+            }
+        }
+
+        document.getElementById('simulate')?.addEventListener('click', async (e) => {
+            const btn = e.currentTarget;
+            const textSpan = document.getElementById('simulate-text');
+            btn.disabled = true;
+            textSpan.innerText = 'Triggering...';
+
+            const id = 'sim-' + Math.random().toString(36).substr(2, 5);
+            try {
+                await fetch(`${apiUrl}/api/v1/alerts`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: {
+                            data: btoa(JSON.stringify({
+                                incident: {
+                                    incident_id: id,
+                                    policy_name: "Portfolio Simulation",
+                                    condition_name: "Manual Click",
+                                    resource_id: "example-service"
+                                }
+                            }))
+                        }
+                    })
+                });
+                textSpan.innerText = 'Triage in Progress... (Wait 15s)';
+                setTimeout(() => {
+                    loadReports();
+                    btn.disabled = false;
+                    textSpan.innerText = 'Trigger Incident';
+                }, 15000);
+            } catch (err) {
+                alert('Failed to trigger simulation.');
+                btn.disabled = false;
+                textSpan.innerText = 'Trigger Incident';
+            }
+        });
+
+        // Initial load
+        loadReports();
+    </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+# compiled binaries
+bin/
+sentry-go
+
+# go test/coverage
+*.test
+*.out
+coverage.txt
+
+# environment variables
+.env
+.env.local
+.env.production
+
+# editor
+.vscode/
+.idea/
+*.swp
+
+# os
+.DS_Store
+Thumbs.db
+
+# logs
+*.log
