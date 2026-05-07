@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"path"
+	"strings"
 
 	"github.com/jrk-ai-labs/sentry-go/internal/agent"
 	"github.com/jrk-ai-labs/sentry-go/internal/model"
@@ -20,9 +22,21 @@ func NewAlertHandler(svc *agent.TriageService) *AlertHandler {
 	}
 }
 
-func (h *AlertHandler) HandleGetReports(w http.ResponseWriter, r *http.Request) {
+func corsHeaders(w http.ResponseWriter, methods string) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Methods", methods)
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(v)
+}
+
+// GET /api/v1/incidents — list all reports
+func (h *AlertHandler) HandleGetReports(w http.ResponseWriter, r *http.Request) {
+	corsHeaders(w, "GET, OPTIONS")
 	if r.Method == http.MethodOptions {
 		return
 	}
@@ -36,18 +50,80 @@ func (h *AlertHandler) HandleGetReports(w http.ResponseWriter, r *http.Request) 
 	if reports == nil {
 		reports = []model.Report{}
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(reports)
+	writeJSON(w, http.StatusOK, reports)
 }
 
-func (h *AlertHandler) HandleAlert(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+// GET /api/v1/incidents/{id} — single report
+func (h *AlertHandler) HandleGetIncident(w http.ResponseWriter, r *http.Request) {
+	corsHeaders(w, "GET, OPTIONS")
 	if r.Method == http.MethodOptions {
 		return
 	}
 
+	id := path.Base(r.URL.Path)
+	report, err := h.TriageService.Firestore.GetReport(r.Context(), id)
+	if err != nil {
+		log.Printf("Failed to fetch incident %s: %v", id, err)
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "incident not found"})
+		return
+	}
+	writeJSON(w, http.StatusOK, report)
+}
+
+// POST /api/v1/incidents/{id}/actions — approve or reject remediation
+func (h *AlertHandler) HandleIncidentAction(w http.ResponseWriter, r *http.Request) {
+	corsHeaders(w, "POST, OPTIONS")
+	if r.Method == http.MethodOptions {
+		return
+	}
+	if r.Method != http.MethodPost {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	// Expect path like /api/v1/incidents/{id}/actions
+	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/incidents/"), "/")
+	if len(parts) < 2 {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid path; expected /api/v1/incidents/{id}/actions"})
+		return
+	}
+	incidentID := parts[0]
+
+	var req model.ApprovalRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid JSON body"})
+		return
+	}
+
+	req.Action = strings.ToUpper(req.Action)
+	if req.Action != "APPROVE" && req.Action != "REJECT" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "action must be APPROVE or REJECT"})
+		return
+	}
+
+	// Verify the incident exists
+	if _, err := h.TriageService.Firestore.GetReport(r.Context(), incidentID); err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "incident not found"})
+		return
+	}
+
+	report, err := h.TriageService.Firestore.UpdateApproval(r.Context(), incidentID, req.Action, req.Comment)
+	if err != nil {
+		log.Printf("Failed to update approval for %s: %v", incidentID, err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to update approval"})
+		return
+	}
+
+	log.Printf("[Approval] Incident %s: action=%s comment=%q", incidentID, req.Action, req.Comment)
+	writeJSON(w, http.StatusOK, report)
+}
+
+// POST /api/v1/alerts — ingest Pub/Sub alert
+func (h *AlertHandler) HandleAlert(w http.ResponseWriter, r *http.Request) {
+	corsHeaders(w, "POST, OPTIONS")
+	if r.Method == http.MethodOptions {
+		return
+	}
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
@@ -76,7 +152,7 @@ func (h *AlertHandler) HandleAlert(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Triage started for incident: %s (%s)", alert.Incident.IncidentID, alert.Incident.PolicyName)
 
 	go h.TriageService.StartTriage(context.Background(), alert)
-	
+
 	w.WriteHeader(http.StatusAccepted)
 }
 
