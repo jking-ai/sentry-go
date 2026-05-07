@@ -17,14 +17,18 @@ const (
 
 // CircuitBreaker prevents cascading failures by tripping open after
 // consecutive failures and probing for recovery after a cooldown.
+// In HalfOpen state, only a single in-flight probe is allowed; all other
+// requests are rejected to prevent a thundering herd against a recovering
+// dependency.
 type CircuitBreaker struct {
-	mu           sync.Mutex
-	state        State
-	failures     int
-	threshold    int
-	cooldown     time.Duration
-	lastFailure  time.Time
-	onStateChange func(from, to State)
+	mu             sync.Mutex
+	state          State
+	failures       int
+	threshold      int
+	cooldown       time.Duration
+	lastFailure    time.Time
+	halfOpenProbe  bool // true when a probe is already in-flight
+	onStateChange  func(from, to State)
 }
 
 // NewCircuitBreaker creates a breaker that trips after threshold consecutive
@@ -48,6 +52,8 @@ func WithStateChangeHook(fn func(from, to State)) func(*CircuitBreaker) {
 
 // Execute runs fn if the circuit allows it. It records success/failure and
 // transitions the breaker state accordingly.
+// In HalfOpen, only one concurrent probe is permitted; additional callers
+// receive ErrCircuitOpen until the probe completes.
 func (cb *CircuitBreaker) Execute(ctx context.Context, fn func() error) error {
 	if err := cb.allow(); err != nil {
 		return err
@@ -73,10 +79,16 @@ func (cb *CircuitBreaker) allow() error {
 	case Open:
 		if time.Since(cb.lastFailure) > cb.cooldown {
 			cb.transition(HalfOpen)
+			cb.halfOpenProbe = true // reserve the single probe slot
 			return nil
 		}
 		return ErrCircuitOpen
 	case HalfOpen:
+		if cb.halfOpenProbe {
+			// A probe is already in-flight — reject to prevent thundering herd
+			return ErrCircuitOpen
+		}
+		cb.halfOpenProbe = true
 		return nil
 	}
 	return nil
@@ -87,7 +99,11 @@ func (cb *CircuitBreaker) recordFailure() {
 	defer cb.mu.Unlock()
 	cb.failures++
 	cb.lastFailure = time.Now()
-	if cb.failures >= cb.threshold {
+	cb.halfOpenProbe = false
+	if cb.state == HalfOpen {
+		// Probe failed — trip back open
+		cb.transition(Open)
+	} else if cb.failures >= cb.threshold {
 		cb.transition(Open)
 	}
 }
@@ -96,6 +112,7 @@ func (cb *CircuitBreaker) recordSuccess() {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()
 	cb.failures = 0
+	cb.halfOpenProbe = false
 	if cb.state == HalfOpen {
 		cb.transition(Closed)
 	}
@@ -112,7 +129,7 @@ func (cb *CircuitBreaker) transition(to State) {
 	}
 }
 
-// State returns the current breaker state (for diagnostics).
+// CurrentState returns the current breaker state (for diagnostics).
 func (cb *CircuitBreaker) CurrentState() State {
 	cb.mu.Lock()
 	defer cb.mu.Unlock()

@@ -14,27 +14,31 @@ import (
 
 func (c *Client) FetchMetrics(ctx context.Context, resourceID string, lookback time.Duration) (string, error) {
 	var result string
+
 	err := c.MetricsCB.Execute(ctx, func() error {
+		// Create the MetricClient once per FetchMetrics call (not per retry attempt).
+		metricClient, clientErr := monitoring.NewMetricClient(ctx)
+		if clientErr != nil {
+			return clientErr
+		}
+		defer metricClient.Close()
+
 		fetched, fetchErr := resilience.Retry(ctx, resilience.DefaultMaxRetries, resilience.DefaultBaseDelay, resilience.DefaultMaxDelay, func() (string, error) {
-			return fetchMetricsOnce(ctx, c, resourceID, lookback)
+			return listTimeSeries(ctx, metricClient, c.ProjectID, resourceID, lookback)
 		})
 		result = fetched
 		return fetchErr
 	})
+
 	return result, err
 }
 
-func fetchMetricsOnce(ctx context.Context, c *Client, resourceID string, lookback time.Duration) (string, error) {
-	client, err := monitoring.NewMetricClient(ctx)
-	if err != nil {
-		return "", err
-	}
-	defer client.Close()
-
+// listTimeSeries performs a single attempt to fetch CPU utilization metrics.
+func listTimeSeries(ctx context.Context, metricClient *monitoring.MetricClient, projectID, resourceID string, lookback time.Duration) (string, error) {
 	filter := fmt.Sprintf(`resource.type="cloud_run_revision" AND resource.labels.service_name="%s" AND metric.type="run.googleapis.com/container/cpu/utilizations"`, resourceID)
 
 	req := &monitoringpb.ListTimeSeriesRequest{
-		Name:   "projects/" + c.ProjectID,
+		Name:   "projects/" + projectID,
 		Filter: filter,
 		Interval: &monitoringpb.TimeInterval{
 			StartTime: timestamppb.New(time.Now().Add(-lookback)),
@@ -42,7 +46,7 @@ func fetchMetricsOnce(ctx context.Context, c *Client, resourceID string, lookbac
 		},
 	}
 
-	it := client.ListTimeSeries(ctx, req)
+	it := metricClient.ListTimeSeries(ctx, req)
 
 	summary := "Metric: CPU Utilization\n"
 	for {

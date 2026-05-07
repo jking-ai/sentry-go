@@ -107,7 +107,7 @@ func TestCircuitBreakerRecoversAfterCooldown(t *testing.T) {
 	// Wait for cooldown
 	time.Sleep(30 * time.Millisecond)
 
-	// Next request should be allowed (half-open) and succeed → closes the circuit
+	// Next request should be allowed (half-open probe) and succeed → closes the circuit
 	err := cb.Execute(context.Background(), func() error {
 		return nil
 	})
@@ -116,6 +116,53 @@ func TestCircuitBreakerRecoversAfterCooldown(t *testing.T) {
 	}
 	if cb.CurrentState() != Closed {
 		t.Errorf("state = %v, want CLOSED after recovery", cb.CurrentState())
+	}
+}
+
+func TestCircuitBreakerHalfOpenRejectsConcurrent(t *testing.T) {
+	cb := NewCircuitBreaker(1, 10*time.Millisecond)
+
+	// Trip the breaker
+	_ = cb.Execute(context.Background(), func() error { return errors.New("fail") })
+	if cb.CurrentState() != Open {
+		t.Fatalf("expected OPEN, got %v", cb.CurrentState())
+	}
+
+	// Wait for cooldown to enter half-open
+	time.Sleep(20 * time.Millisecond)
+
+	// First request should succeed and claim the probe slot
+	err := cb.Execute(context.Background(), func() error { return nil })
+	if err != nil {
+		t.Fatalf("expected probe to be allowed: %v", err)
+	}
+
+	// After the successful probe, the circuit should be Closed, so this should also succeed
+	err = cb.Execute(context.Background(), func() error { return nil })
+	if err != nil {
+		t.Fatalf("expected request in closed state: %v", err)
+	}
+}
+
+func TestCircuitBreakerHalfOpenFailsBackToOpen(t *testing.T) {
+	cb := NewCircuitBreaker(1, 20*time.Millisecond)
+
+	// Trip the breaker
+	_ = cb.Execute(context.Background(), func() error { return errors.New("fail") })
+	if cb.CurrentState() != Open {
+		t.Fatalf("expected OPEN, got %v", cb.CurrentState())
+	}
+
+	// Wait for cooldown
+	time.Sleep(30 * time.Millisecond)
+
+	// Probe fails → back to open
+	err := cb.Execute(context.Background(), func() error { return errors.New("still broken") })
+	if err == nil {
+		t.Fatal("expected error from failed probe")
+	}
+	if cb.CurrentState() != Open {
+		t.Errorf("expected OPEN after failed probe, got %v", cb.CurrentState())
 	}
 }
 

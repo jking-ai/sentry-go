@@ -87,7 +87,7 @@ Submit an approval or rejection for a remediation command.
 }
 ```
 
-**Action values:** `APPROVE` or `REJECT` (case-sensitive).
+**Action values:** `APPROVE` or `REJECT` (case-insensitive — the handler normalizes to uppercase).
 
 **Response:**
 - `200 OK`: Action recorded. Returns the updated report.

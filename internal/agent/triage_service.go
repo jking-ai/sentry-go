@@ -135,9 +135,10 @@ func (s *TriageService) StartTriage(ctx context.Context, alert model.Alert) {
 			s, err := s.GitHubClient.FetchRecentCommits(ctx, parts[0], parts[1], 10)
 			if err != nil {
 				log.Printf("[Triage] Error fetching commits: %v", err)
-			} else {
-				summary = s
+				commitsCh <- commitsResult{summary, err}
+				return
 			}
+			summary = s
 		}
 		commitsCh <- commitsResult{summary, nil}
 	}()
@@ -150,7 +151,7 @@ func (s *TriageService) StartTriage(ctx context.Context, alert model.Alert) {
 		if summary == "" {
 			summary = "(no metrics available)"
 		}
-		metricsCh <- metricsResult{summary, nil}
+		metricsCh <- metricsResult{summary, err}
 	}()
 
 	lr := <-logsCh

@@ -22,7 +22,9 @@ type Result[T any] struct {
 }
 
 // Retry executes fn with exponential backoff + jitter. Returns the value on
-// success or the last error after all attempts are exhausted.
+// success or the last error after all attempts are exhausted. Uses
+// time.NewTimer (with explicit Stop and drain) to avoid leaking timers
+// when the context is cancelled early.
 func Retry[T any](ctx context.Context, maxRetries int, baseDelay, maxDelay time.Duration, fn func() (T, error)) (T, error) {
 	var lastErr error
 	var zero T
@@ -43,10 +45,13 @@ func Retry[T any](ctx context.Context, maxRetries int, baseDelay, maxDelay time.
 		}
 
 		delay := backoff(attempt, baseDelay, maxDelay)
+		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return zero, ctx.Err()
-		case <-time.After(delay):
+		case <-timer.C:
+			// Timer fired, proceed to next attempt.
 		}
 	}
 

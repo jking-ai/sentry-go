@@ -61,6 +61,7 @@ func TestHandleIncidentActionRejectsGET(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/incidents/test-inc/actions", nil)
 	w := httptest.NewRecorder()
 	h.HandleIncidentAction(w, req)
+	// GET should be rejected with 405 before path validation
 	if w.Result().StatusCode != http.StatusMethodNotAllowed {
 		t.Errorf("GET /actions status = %d, want %d", w.Result().StatusCode, http.StatusMethodNotAllowed)
 	}

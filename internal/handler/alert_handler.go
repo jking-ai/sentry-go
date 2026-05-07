@@ -59,6 +59,10 @@ func (h *AlertHandler) HandleGetIncident(w http.ResponseWriter, r *http.Request)
 	if r.Method == http.MethodOptions {
 		return
 	}
+	if r.Method != http.MethodGet {
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
 
 	id := path.Base(r.URL.Path)
 	report, err := h.TriageService.Firestore.GetReport(r.Context(), id)
@@ -83,7 +87,7 @@ func (h *AlertHandler) HandleIncidentAction(w http.ResponseWriter, r *http.Reque
 
 	// Expect path like /api/v1/incidents/{id}/actions
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/api/v1/incidents/"), "/")
-	if len(parts) < 2 {
+	if len(parts) != 2 || parts[1] != "actions" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid path; expected /api/v1/incidents/{id}/actions"})
 		return
 	}
