@@ -44,7 +44,7 @@ func NewTriageService(ctx context.Context, projectID string) (*TriageService, er
 		return nil, err
 	}
 
-	m, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
+	m, err := gemini.NewModel(ctx, "gemini-3.1-flash-lite-preview", &genai.ClientConfig{
 		Project:  projectID,
 		Location: "us-central1",
 		Backend:  genai.BackendVertexAI,

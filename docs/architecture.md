@@ -6,7 +6,7 @@ Sentry-Go is a cloud-native incident response agent written in Go. It uses the *
 ## Tech Stack
 - **Language:** Go 1.26+
 - **Agent Framework:** Go ADK v2.0 (`google.golang.org/adk`)
-- **LLM:** Gemini 2.5 Flash (via Vertex AI)
+- **LLM:** Gemini 3.1 Flash-Lite (via Vertex AI)
 - **Deployment:** Google Cloud Run
 - **Eventing:** Cloud Pub/Sub
 - **Observability:** Cloud Logging, Cloud Monitoring

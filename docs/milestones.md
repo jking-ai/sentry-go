@@ -9,7 +9,7 @@
 
 ## Phase 2: AI Reasoning & Briefing (Goal: Gemini-Powered Root Cause Analysis)
 - [x] **2.1: Prompt Engineering:** Design the "Triage Prompt" that combines logs, commits, and metrics.
-- [x] **2.2: Gemini Integration:** Use Go ADK to send context to `gemini-2.5-flash`.
+- [x] **2.2: Gemini Integration:** Use Go ADK to send context to `gemini-3.1-flash-lite-preview`.
 - [x] **2.3: Root Cause Deduction:** Implement logic to identify the most likely "breaking change."
 - [x] **2.4: Briefing Formatter:** Create a Markdown/Slack-ready summary of findings.
 - [x] **2.5: Metrics Integration:** Wire the `Metric Analyst` node into the triage prompt for CPU/memory correlation.

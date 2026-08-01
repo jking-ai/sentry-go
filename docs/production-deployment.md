@@ -19,7 +19,7 @@
 ## IAM Roles Assigned to `sentry-go-sa`
 - `roles/logging.viewer`: To fetch error logs for triage.
 - `roles/monitoring.viewer`: To fetch metrics for correlation.
-- `roles/aiplatform.user`: To call Gemini 2.0 Flash via Vertex AI.
+- `roles/aiplatform.user`: To call Gemini 3.1 Flash-Lite via Vertex AI.
 - `roles/run.viewer`: To inspect Cloud Run service state.
 
 ## Deployment Instructions
